@@ -39,7 +39,9 @@ class PriceConnectionManager:  # this part was new for me i started some digging
 manager = PriceConnectionManager()
 
 
-@app.websocket("/ws/price")
+@app.websocket(
+    "/ws/price"
+)  # TODO we are only sending the number not object a liitle bit more efficient in data usage and speed but its so little
 async def price_websocket(websocket: WebSocket, ins_code: str):
     """
     Stream price change percentage (pDrCotVal) for a specific instrument.
@@ -52,9 +54,7 @@ async def price_websocket(websocket: WebSocket, ins_code: str):
         while True:
             # print(f"clients online: {len(manager.active_connections)}")
             price_change = get_price_change(ins_code_int)
-            await websocket.send_json(
-                {"ins_code": ins_code_int, "pDrCotVal": price_change}
-            )
+            await websocket.send_text(str(price_change))
             await asyncio.sleep(2)
     except WebSocketDisconnect:
         print("Client disconnected")
@@ -86,8 +86,7 @@ async def price_websocket_test():
                 ws = new WebSocket(`ws://${location.host}/ws/price?ins_code=${insCode}`);
                 ws.onopen = () => log.innerHTML += "Connected<br>";
                 ws.onmessage = (e) => {
-                    const data = JSON.parse(e.data);
-                    log.innerHTML += JSON.stringify(data) + "<br>";
+                    log.innerHTML += e.data + "<br>";
                 };
                 ws.onclose = () => log.innerHTML += "Disconnected<br>";
             }
