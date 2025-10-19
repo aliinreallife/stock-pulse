@@ -15,7 +15,9 @@ app = FastAPI(title="Stock Pulse API", description="Get instrument price data")
 async def get_market_watch():
     """Get full market watch data."""
     try:
-        data = get_market_watch_data()
+        # Run in thread pool to prevent blocking WebSocket
+        data = await asyncio.to_thread(get_market_watch_data)
+
         return MarketWatchResponse(**data)
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Server error: {str(e)}")
@@ -55,7 +57,7 @@ async def price_websocket(websocket: WebSocket, ins_code: str):
             # print(f"clients online: {len(manager.active_connections)}")
             price_change = get_price_change(ins_code_int)
             await websocket.send_text(str(price_change))
-            await asyncio.sleep(2)
+            await asyncio.sleep(0.5)
     except WebSocketDisconnect:
         print("Client disconnected")
     except Exception as e:
