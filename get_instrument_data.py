@@ -2,6 +2,7 @@ import os
 from datetime import datetime
 
 import requests
+import orjson
 
 from schemas import BestLimitsResponse, ClosingPriceResponse, TradeResponse
 from utils import save_json, get_timestamp
@@ -10,21 +11,22 @@ from utils import save_json, get_timestamp
 def get_closing_price_info(ins_code):
     url = f"https://cdn.tsetmc.com/api/ClosingPrice/GetClosingPriceInfo/{ins_code}"
     response = requests.get(url)
-    data = response.json()
+    data = orjson.loads(response.content)
     return data
 
 
 def get_best_limits(ins_code):
     url = f"https://cdn.tsetmc.com/api/BestLimits/{ins_code}"
     response = requests.get(url)
-    data = response.json()
+    data = orjson.loads(response.content)
     return data
 
 
 def get_trade(ins_code):
     url = f"https://cdn.tsetmc.com/api/Trade/GetTrade/{ins_code}"
     response = requests.get(url)
-    data = response.json()
+    # Use orjson for faster JSON parsing instead of response.json()
+    data = orjson.loads(response.content)
     return data
 
 
@@ -36,7 +38,8 @@ def get_price_change(ins_code):
     if response.status_code != 200:
         raise ValueError(f"Instrument {ins_code} not found")
     
-    data = response.json()
+    # Use orjson for faster JSON parsing instead of response.json()
+    data = orjson.loads(response.content)
     return data["closingPriceInfo"]["pDrCotVal"]
 
 
