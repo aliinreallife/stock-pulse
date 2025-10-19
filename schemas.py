@@ -4,6 +4,7 @@ from pydantic import BaseModel
 
 # TODO: later we should look about the filed types cus they could be wrong i test it on some samples but that wont garantee it
 
+
 class InstrumentState(BaseModel):
     idn: int
     dEven: int
@@ -60,6 +61,7 @@ class BestLimit(BaseModel):
 class BestLimitsResponse(BaseModel):
     bestLimits: List[BestLimit]
 
+
 class Trade(BaseModel):
     insCode: Optional[str] = None
     dEven: int
@@ -74,7 +76,6 @@ class Trade(BaseModel):
     iAnuTran: int
     xqVarPJDrPRf: float
     canceled: int
-
 
 
 class TradeResponse(BaseModel):
@@ -137,3 +138,7 @@ class MarketWatchItem(BaseModel):
 
 class MarketWatchResponse(BaseModel):
     marketwatch: List[MarketWatchItem]
+
+
+class PriceResponse(BaseModel):
+    pDrCotVal: float

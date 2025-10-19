@@ -28,6 +28,18 @@ def get_trade(ins_code):
     return data
 
 
+def get_price_change(ins_code):
+    """Get price change percentage (pDrCotVal) for a given instrument code."""
+    url = f"https://cdn.tsetmc.com/api/ClosingPrice/GetClosingPriceInfo/{ins_code}"
+    response = requests.get(url, timeout=10)
+    
+    if response.status_code != 200:
+        raise ValueError(f"Instrument {ins_code} not found")
+    
+    data = response.json()
+    return data["closingPriceInfo"]["pDrCotVal"]
+
+
 def main():
 
     ins_code = 28854105556435129
