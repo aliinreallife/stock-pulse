@@ -55,15 +55,15 @@ def main():
         f"{instrument_code_dir}/closing_price_{timestamp}.json"
     )
     with open(save_path_closing_price_info, "w", encoding="utf-8") as f:
-        json.dump(data_closing_price_info, f, indent=4, ensure_ascii=False)
+        json.dump(data_closing_price_info, f, indent=2, ensure_ascii=False)
 
     save_path_best_limits = f"{instrument_code_dir}/best_limits_{timestamp}.json"
     with open(save_path_best_limits, "w", encoding="utf-8") as f:
-        json.dump(data_best_limits, f, indent=4, ensure_ascii=False)
+        json.dump(data_best_limits, f, indent=2, ensure_ascii=False)
 
     save_path_trade = f"{instrument_code_dir}/trade_{timestamp}.json"
     with open(save_path_trade, "w", encoding="utf-8") as f:
-        json.dump(data_trade, f, indent=4, ensure_ascii=False)
+        json.dump(data_trade, f, indent=2, ensure_ascii=False)
 
 
 if __name__ == "__main__":
