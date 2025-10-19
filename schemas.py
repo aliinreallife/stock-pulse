@@ -57,6 +57,9 @@ class BestLimit(BaseModel):
     insCode: Optional[str] = None
 
 
+class BestLimitsResponse(BaseModel):
+    bestLimits: List[BestLimit]
+
 class Trade(BaseModel):
     insCode: Optional[str] = None
     dEven: int
@@ -73,9 +76,10 @@ class Trade(BaseModel):
     canceled: int
 
 
-class BestLimitsResponse(BaseModel):
-    bestLimits: List[BestLimit]
-
 
 class TradeResponse(BaseModel):
     trade: List[Trade]
+
+
+class ClosingPriceResponse(BaseModel):
+    closingPriceInfo: ClosingPriceInfo

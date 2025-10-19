@@ -4,7 +4,9 @@ Test TSE schemas on all exported data.
 
 import json
 from pathlib import Path
-from schemas import ClosingPriceResponse, BestLimitsResponse
+import sys
+sys.path.append(str(Path(__file__).parent.parent))
+from schemas import ClosingPriceResponse, BestLimitsResponse, TradeResponse
 
 def test_all_schemas():
     """Test schemas on all exported data files."""
@@ -34,7 +36,7 @@ def test_all_schemas():
                 with open(file_path, 'r') as f:
                     data = json.load(f)
                 
-                response = ClosingPriceResponse(**data)
+                closing_response = ClosingPriceResponse(**data)
                 passed_tests += 1
                 
             except Exception as e:
@@ -50,7 +52,23 @@ def test_all_schemas():
                 with open(file_path, 'r') as f:
                     data = json.load(f)
                 
-                response = BestLimitsResponse(**data)
+                best_limits_response = BestLimitsResponse(**data)
+                passed_tests += 1
+                
+            except Exception as e:
+                failed_files.append((file_path.name, str(e)))
+
+        # Test all trade files
+        trade_files = list(instrument_dir.glob("trade_*.json"))
+        print(f"  Trade files: {len(trade_files)}")
+        
+        for file_path in trade_files:
+            total_tests += 1
+            try:
+                with open(file_path, 'r') as f:
+                    data = json.load(f)
+                
+                trade_response = TradeResponse(**data)
                 passed_tests += 1
                 
             except Exception as e:

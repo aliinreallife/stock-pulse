@@ -3,8 +3,9 @@ import os
 from datetime import datetime
 
 import requests
+from schemas import ClosingPriceResponse, BestLimitsResponse, TradeResponse
 
-ins_code = 6905737326614124
+ins_code = 28854105556435129
 
 
 def get_closing_price_info(ins_code):
@@ -20,7 +21,6 @@ def get_best_limits(ins_code):
     data = response.json()
     return data
 
-
 def get_trade(ins_code):
     url = f"https://cdn.tsetmc.com/api/Trade/GetTrade/{ins_code}"
     response = requests.get(url)
@@ -34,13 +34,19 @@ timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
 export_dir = f"export/{ins_code}"
 os.makedirs(export_dir, exist_ok=True)
 
+# Get data from APIs
 data_closing_price_info = get_closing_price_info(ins_code)
 data_best_limits = get_best_limits(ins_code)
 data_trade = get_trade(ins_code)
 
-data_closing_price_info["timestamp"] = timestamp
-data_best_limits["timestamp"] = timestamp
-data_trade["timestamp"] = timestamp
+# Validate data with schemas
+try:
+    closing_response = ClosingPriceResponse(**data_closing_price_info)
+    best_limits_response = BestLimitsResponse(**data_best_limits)
+    trade_response = TradeResponse(**data_trade)
+except Exception as e:
+    print(f"Validation failed: {e}")
+    exit(1)
 
 save_path_closing_price_info = f"{export_dir}/closing_price_{timestamp}.json"
 with open(save_path_closing_price_info, "w", encoding="utf-8") as f:
