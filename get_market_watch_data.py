@@ -1,8 +1,8 @@
-import json
 import os
 from datetime import datetime
 
 import requests
+from utils import save_json, get_timestamp
 
 
 def get_market_watch_data():
@@ -14,13 +14,11 @@ def get_market_watch_data():
 
 
 def main():
-    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    timestamp = get_timestamp()
     export_dir = "export/market_watch"
-    os.makedirs(export_dir, exist_ok=True)
     data = get_market_watch_data()
     save_path = f"{export_dir}/market_watch_{timestamp}.json"
-    with open(save_path, "w", encoding="utf-8") as f:
-        json.dump(data, f, indent=2, ensure_ascii=False)
+    save_json(data, save_path)
 
 
 if __name__ == "__main__":

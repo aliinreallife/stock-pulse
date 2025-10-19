@@ -1,10 +1,10 @@
-import json
 import os
 from datetime import datetime
 
 import requests
 
 from schemas import BestLimitsResponse, ClosingPriceResponse, TradeResponse
+from utils import save_json, get_timestamp
 
 
 def get_closing_price_info(ins_code):
@@ -43,7 +43,7 @@ def get_price_change(ins_code):
 def main():
 
     ins_code = 28854105556435129
-    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    timestamp = get_timestamp()
 
     # Create directory structure: export/instrument/{ins_code}/
     instrument_code_dir = f"export/instrument/{ins_code}"
@@ -66,16 +66,13 @@ def main():
     save_path_closing_price_info = (
         f"{instrument_code_dir}/closing_price_{timestamp}.json"
     )
-    with open(save_path_closing_price_info, "w", encoding="utf-8") as f:
-        json.dump(data_closing_price_info, f, indent=2, ensure_ascii=False)
+    save_json(data_closing_price_info, save_path_closing_price_info)
 
     save_path_best_limits = f"{instrument_code_dir}/best_limits_{timestamp}.json"
-    with open(save_path_best_limits, "w", encoding="utf-8") as f:
-        json.dump(data_best_limits, f, indent=2, ensure_ascii=False)
+    save_json(data_best_limits, save_path_best_limits)
 
     save_path_trade = f"{instrument_code_dir}/trade_{timestamp}.json"
-    with open(save_path_trade, "w", encoding="utf-8") as f:
-        json.dump(data_trade, f, indent=2, ensure_ascii=False)
+    save_json(data_trade, save_path_trade)
 
 
 if __name__ == "__main__":
