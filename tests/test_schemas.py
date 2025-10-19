@@ -7,7 +7,7 @@ import sys
 from pathlib import Path
 
 sys.path.append(str(Path(__file__).parent.parent))
-from schemas import BestLimitsResponse, ClosingPriceResponse, TradeResponse
+from schemas import BestLimitsResponse, ClosingPriceResponse, TradeResponse, MarketWatchResponse
 
 
 def test_all_schemas():
@@ -80,7 +80,25 @@ def test_all_schemas():
 
             except Exception as e:
                 failed_files.append((file_path.name, str(e)))
-
+    
+    # Test market watch files
+    market_watch_dir = export_dir / "market_watch"
+    if market_watch_dir.exists():
+        market_watch_files = list(market_watch_dir.glob("market_watch_*.json"))
+        print(f"\nTesting market watch files: {len(market_watch_files)}")
+        
+        for file_path in market_watch_files:
+            total_tests += 1
+            try:
+                with open(file_path, "r") as f:
+                    data = json.load(f)
+                
+                market_watch_response = MarketWatchResponse(**data)
+                passed_tests += 1
+                
+            except Exception as e:
+                failed_files.append((file_path.name, str(e)))
+    
     print("\n" + "=" * 50)
     print("Test Results:")
     print(f"Total files tested: {total_tests}")

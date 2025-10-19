@@ -83,3 +83,57 @@ class TradeResponse(BaseModel):
 
 class ClosingPriceResponse(BaseModel):
     closingPriceInfo: ClosingPriceInfo
+
+
+class MarketWatchBestLimit(BaseModel):
+    n: int
+    qmd: int
+    zmd: int
+    pmd: float
+    pmo: float
+    zmo: int
+    qmo: int
+    rid: int
+
+
+class MarketWatchItem(BaseModel):
+    lva: str
+    lvc: str
+    eps: float
+    pe: Optional[Any] = None
+    pmd: float
+    pmo: float
+    qtj: float
+    pdv: float
+    ztt: float
+    qtc: float
+    bv: float
+    pc: float
+    pcpc: float
+    pmn: float
+    pmx: float
+    py: float
+    pf: float
+    pcl: float
+    vc: int
+    csv: str
+    insID: str
+    pMax: float
+    pMin: float
+    ztd: float
+    blDs: List[MarketWatchBestLimit]
+    id: int
+    insCode: str
+    dEven: int
+    hEven: int
+    pClosing: float
+    iClose: bool
+    yClose: bool
+    pDrCotVal: float
+    zTotTran: float
+    qTotTran5J: float
+    qTotCap: float
+
+
+class MarketWatchResponse(BaseModel):
+    marketwatch: List[MarketWatchItem]
