@@ -1,14 +1,19 @@
-from fastapi import FastAPI, HTTPException
 import requests
+from fastapi import FastAPI, HTTPException, Query
+
 from get_instrument_data import get_price_change
 from get_market_watch_data import get_market_watch_data
-from schemas import PriceResponse, MarketWatchResponse
+from schemas import MarketWatchResponse, PriceResponse
 
 app = FastAPI(title="Stock Pulse API", description="Get instrument price data")
 
 
-@app.get("/price/{ins_code}", response_model=PriceResponse) # TODO: we should use web socket for this
-async def get_price_endpoint(ins_code: str):
+@app.get("/price", response_model=PriceResponse)
+async def get_price_endpoint(
+    ins_code: str = Query(
+        default="28854105556435129",
+    )
+):
     """Get price change percentage (pDrCotVal) for a given instrument code."""
     try:
         ins_code_int = int(ins_code)
