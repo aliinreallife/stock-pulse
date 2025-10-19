@@ -13,13 +13,17 @@ def get_market_watch_data():
     return data
 
 
-timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
 
-export_dir = "export/market_watch"
-os.makedirs(export_dir, exist_ok=True)
 
-data = get_market_watch_data()
 
-save_path = f"{export_dir}/market_watch_{timestamp}.json"
-with open(save_path, "w", encoding="utf-8") as f:
-    json.dump(data, f, indent=2, ensure_ascii=False)
+def main():
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    export_dir = "export/market_watch"
+    os.makedirs(export_dir, exist_ok=True)
+    data = get_market_watch_data()
+    save_path = f"{export_dir}/market_watch_{timestamp}.json"
+    with open(save_path, "w", encoding="utf-8") as f:
+        json.dump(data, f, indent=2, ensure_ascii=False)
+
+if __name__ == "__main__":
+    main()
