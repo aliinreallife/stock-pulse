@@ -65,7 +65,7 @@ async def price_websocket(websocket: WebSocket, ins_code: str):
 
 
 @app.get(
-    "/ws-price-test", response_class=HTMLResponse
+    "/ws-price-test", response_class=HTMLResponse, include_in_schema=False
 )  # just to see what is happening in the websocket for myself # TODO: remove this later
 async def price_websocket_test():
     """Simple test page for price WebSocket."""
