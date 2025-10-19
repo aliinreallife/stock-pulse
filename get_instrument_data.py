@@ -33,9 +33,9 @@ def main():
     ins_code = 28854105556435129
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
 
-    # Create directory structure: export/{ins_code}/
-    export_dir = f"export/{ins_code}"
-    os.makedirs(export_dir, exist_ok=True)
+    # Create directory structure: export/instrument/{ins_code}/
+    instrument_code_dir = f"export/instrument/{ins_code}"
+    os.makedirs(instrument_code_dir, exist_ok=True)
 
     # Get data from APIs
     data_closing_price_info = get_closing_price_info(ins_code)
@@ -51,15 +51,17 @@ def main():
         print(f"Validation failed: {e}")
         exit(1)
 
-    save_path_closing_price_info = f"{export_dir}/closing_price_{timestamp}.json"
+    save_path_closing_price_info = (
+        f"{instrument_code_dir}/closing_price_{timestamp}.json"
+    )
     with open(save_path_closing_price_info, "w", encoding="utf-8") as f:
         json.dump(data_closing_price_info, f, indent=4, ensure_ascii=False)
 
-    save_path_best_limits = f"{export_dir}/best_limits_{timestamp}.json"
+    save_path_best_limits = f"{instrument_code_dir}/best_limits_{timestamp}.json"
     with open(save_path_best_limits, "w", encoding="utf-8") as f:
         json.dump(data_best_limits, f, indent=4, ensure_ascii=False)
 
-    save_path_trade = f"{export_dir}/trade_{timestamp}.json"
+    save_path_trade = f"{instrument_code_dir}/trade_{timestamp}.json"
     with open(save_path_trade, "w", encoding="utf-8") as f:
         json.dump(data_trade, f, indent=4, ensure_ascii=False)
 
