@@ -40,7 +40,7 @@ class PriceConnectionManager:  # this part was new for me i started some digging
 
 manager = PriceConnectionManager()
 
-
+# websocket donst accept response model and dont aprear on swagger ui
 @app.websocket(
     "/ws/price"
 )  # TODO we are only sending the number not object a liitle bit more efficient in data usage and speed but its so little
