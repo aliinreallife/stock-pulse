@@ -1,7 +1,8 @@
 from fastapi import FastAPI, HTTPException
 import requests
 from get_instrument_data import get_price_change
-from schemas import PriceResponse
+from get_market_watch_data import get_market_watch_data
+from schemas import PriceResponse, MarketWatchResponse
 
 app = FastAPI(title="Stock Pulse API", description="Get instrument price data")
 
@@ -21,6 +22,16 @@ async def get_price_endpoint(ins_code: str):
         raise HTTPException(status_code=503, detail="Invalid response from TSE API")
     except requests.RequestException:
         raise HTTPException(status_code=503, detail="Cannot connect to TSE API")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Server error: {str(e)}")
+
+
+@app.get("/marketwatch", response_model=MarketWatchResponse)
+async def get_market_watch():
+    """Get full market watch data."""
+    try:
+        data = get_market_watch_data()
+        return MarketWatchResponse(**data)
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Server error: {str(e)}")
 
