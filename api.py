@@ -1,10 +1,11 @@
 import asyncio
+from typing import List
+
 import requests
 from fastapi import FastAPI, HTTPException, Query, WebSocket, WebSocketDisconnect
 from fastapi.responses import HTMLResponse
-from typing import List
 
-from get_instrument_data import get_price_change
+from get_instrument_data import get_price
 from get_market_watch_data import get_market_watch_data
 from schemas import MarketWatchResponse, PriceResponse
 
@@ -40,13 +41,14 @@ class PriceConnectionManager:  # this part was new for me i started some digging
 
 manager = PriceConnectionManager()
 
+
 # websocket donst accept response model and dont aprear on swagger ui
 @app.websocket(
     "/ws/price"
 )  # TODO we are only sending the number not object a liitle bit more efficient in data usage and speed but its so little
 async def price_websocket(websocket: WebSocket, ins_code: str):
     """
-    Stream price change percentage (pDrCotVal) for a specific instrument.
+    Stream real-time price (pDrCotVal) for a specific instrument.
     Usage:
         ws://localhost:8000/ws/price?ins_code=28854105556435129
     """
@@ -55,8 +57,8 @@ async def price_websocket(websocket: WebSocket, ins_code: str):
         ins_code_int = int(ins_code)
         while True:
             # print(f"clients online: {len(manager.active_connections)}")
-            price_change = get_price_change(ins_code_int)
-            await websocket.send_text(str(price_change))
+            realtime_price = get_price(ins_code_int)
+            await websocket.send_text(str(realtime_price))
             await asyncio.sleep(0.5)
     except WebSocketDisconnect:
         print("Client disconnected")

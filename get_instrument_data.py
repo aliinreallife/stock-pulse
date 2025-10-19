@@ -28,8 +28,8 @@ def get_trade(ins_code):
     return data
 
 
-def get_price_change(ins_code):
-    """Get price change percentage (pDrCotVal) for a given instrument code."""
+def get_price(ins_code):
+    """Get price percentage (pDrCotVal) for a given instrument code."""
     url = f"https://cdn.tsetmc.com/api/ClosingPrice/GetClosingPriceInfo/{ins_code}"
     response = requests.get(url, timeout=10)
     
