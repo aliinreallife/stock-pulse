@@ -57,11 +57,25 @@ class BestLimit(BaseModel):
     insCode: Optional[str] = None
 
 
-class ClosingPriceResponse(BaseModel):
-    closingPriceInfo: ClosingPriceInfo
-    timestamp: str
+class Trade(BaseModel):
+    insCode: Optional[str] = None
+    dEven: int
+    nTran: int
+    hEven: int
+    qTitTran: int
+    pTran: float
+    qTitNgJ: int
+    iSensVarP: str
+    pPhSeaCotJ: float
+    pPbSeaCotJ: float
+    iAnuTran: int
+    xqVarPJDrPRf: float
+    canceled: int
 
 
 class BestLimitsResponse(BaseModel):
     bestLimits: List[BestLimit]
-    timestamp: str
+
+
+class TradeResponse(BaseModel):
+    trade: List[Trade]
