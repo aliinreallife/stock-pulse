@@ -2,7 +2,7 @@
 Test TSE schemas on all exported data.
 """
 
-import json
+import orjson
 import sys
 from pathlib import Path
 
@@ -40,8 +40,8 @@ def test_all_schemas():
         for file_path in closing_files:
             total_tests += 1
             try:
-                with open(file_path, "r") as f:
-                    data = json.load(f)
+                with open(file_path, "rb") as f:
+                    data = orjson.loads(f.read())
 
                 closing_response = ClosingPriceResponse(**data)
                 passed_tests += 1
@@ -56,8 +56,8 @@ def test_all_schemas():
         for file_path in best_limits_files:
             total_tests += 1
             try:
-                with open(file_path, "r") as f:
-                    data = json.load(f)
+                with open(file_path, "rb") as f:
+                    data = orjson.loads(f.read())
 
                 best_limits_response = BestLimitsResponse(**data)
                 passed_tests += 1
@@ -72,8 +72,8 @@ def test_all_schemas():
         for file_path in trade_files:
             total_tests += 1
             try:
-                with open(file_path, "r") as f:
-                    data = json.load(f)
+                with open(file_path, "rb") as f:
+                    data = orjson.loads(f.read())
 
                 trade_response = TradeResponse(**data)
                 passed_tests += 1
@@ -90,8 +90,8 @@ def test_all_schemas():
         for file_path in market_watch_files:
             total_tests += 1
             try:
-                with open(file_path, "r") as f:
-                    data = json.load(f)
+                with open(file_path, "rb") as f:
+                    data = orjson.loads(f.read())
                 
                 market_watch_response = MarketWatchResponse(**data)
                 passed_tests += 1
