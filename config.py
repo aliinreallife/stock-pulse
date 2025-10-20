@@ -46,4 +46,23 @@ WEBSOCKET_UPDATE_INTERVAL = float(
     os.getenv("WEBSOCKET_UPDATE_INTERVAL", "0.5")
 )  # seconds
 
-DEBUG = os.getenv("DEBUG", "false") == "true"
+DEBUG = os.getenv("DEBUG", "true") == "true"
+
+# TSETMC MarketWatch base
+TSETMC_BASE = "https://cdn.tsetmc.com/api/ClosingPrice/GetMarketWatch"
+
+# Prebuilt MarketWatch URLs (hEven=0; caller may override if needed)
+MARKETWATCH_URLS = {
+    # Stock market (paperTypes=1)
+    "stock_market": (
+        f"{TSETMC_BASE}?market=0&industrialGroup=&paperTypes%5B0%5D=1"
+        f"&showTraded=false&withBestLimits=true&hEven=0&RefID=0"
+    ),
+    # Base market (paperTypes=2)
+    "base_market": (
+        f"{TSETMC_BASE}?market=0&industrialGroup=&paperTypes%5B0%5D=2"
+        f"&showTraded=false&withBestLimits=true&hEven=0&RefID=0"
+    ),
+}
+
+STOCK_BASE_COMBINED = f"{TSETMC_BASE}?market=0&industrialGroup=&paperTypes%5B0%5D=1&paperTypes%5B1%5D=2&showTraded=false&withBestLimits=true&hEven=0&RefID=0"

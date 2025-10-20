@@ -1,7 +1,7 @@
 from fastapi import APIRouter, HTTPException
 from schemas import MarketWatchResponse, MarketStatusResponse
 from utils import is_market_open
-from get_market_watch_data import get_market_watch_data
+from get_market_watch_data import fetch_merged_data
 from database import MarketWatchDB
 from config import DEBUG, get_redis
 from config import TEHRAN_TZ, MARKET_CLOSE_TIME, REDIS_TTL_SECONDS
@@ -43,12 +43,12 @@ async def get_market_watch():
 
         # Cache miss → fetch from source
         if is_market_open():
-            data_dict = await asyncio.to_thread(get_market_watch_data)
+            data_dict = await fetch_merged_data()
             mw_resp = MarketWatchResponse(**data_dict)
             if DEBUG:
                 print("marketwatch live")
         else:
-            mw_resp = db.get_market_watch_from_db()
+            mw_resp = await asyncio.to_thread(db.get_market_watch_from_db)
             data_dict = mw_resp.model_dump()
             if DEBUG:
                 print("marketwatch db")

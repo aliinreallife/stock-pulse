@@ -16,7 +16,7 @@ from config import (API_HOST, API_PORT, MARKET_CLOSE_TIME, TEHRAN_TZ,
                     WEBSOCKET_UPDATE_INTERVAL, get_redis)
 from database import MarketWatchDB
 from get_instrument_data import get_price
-from get_market_watch_data import get_market_watch_data
+from get_market_watch_data import fetch_merged_data
 from schemas import MarketStatusResponse, MarketWatchResponse, PriceResponse
 from utils import is_market_open
 
@@ -49,7 +49,7 @@ async def _save_snapshot_if_valid():
     """Fetch market watch and persist to DB transactionally if non-empty."""
     try:
         print("Fetching market watch data...")
-        data_dict = await asyncio.to_thread(get_market_watch_data)
+        data_dict = await fetch_merged_data()
         print(
             f"Market watch data fetched successfully, items: {len(data_dict.get('marketwatch', []))}"
         )

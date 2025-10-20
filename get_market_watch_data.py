@@ -1,27 +1,64 @@
-import os
-from datetime import datetime
-
-import requests
+import asyncio
+import aiohttp
 import orjson
 from utils import save_json, get_timestamp
+from config import MARKETWATCH_URLS
 
 
-def get_market_watch_data():
-    url = "https://cdn.tsetmc.com/api/ClosingPrice/GetMarketWatch?market=0&industrialGroup=&paperTypes%5B0%5D=1&paperTypes%5B1%5D=2&paperTypes%5B2%5D=3&paperTypes%5B3%5D=4&paperTypes%5B4%5D=5&paperTypes%5B5%5D=6&paperTypes%5B6%5D=7&paperTypes%5B7%5D=8&paperTypes%5B8%5D=9&showTraded=false&withBestLimits=true&hEven=0&RefID=0"
-
-    response = requests.get(url, timeout=30)  # 30 second timeout
-    # Use orjson for faster JSON parsing instead of response.json()
-    data = orjson.loads(response.content)
-    return data
+def _extract_items(data: dict):
+    """Safely extract marketwatch list."""
+    if not data:
+        return []
+    return data.get("marketwatch", [])
 
 
-def main():
+async def fetch_market_data(session: aiohttp.ClientSession, url: str, market_type: str) -> list:
+    """Fetch market data from TSETMC API and tag with market type."""
+    async with session.get(url, timeout=30) as resp:
+        resp.raise_for_status()
+        raw = await resp.read()
+    data = orjson.loads(raw)
+    items = _extract_items(data)
+    # Tag each item with market type
+    for item in items:
+        item["market_type"] = market_type
+    return items
+
+
+async def fetch_merged_data(urls_dict: dict = None):
+    """Fetch market data from multiple sources concurrently and merge results."""
+    if urls_dict is None:
+        urls_dict = MARKETWATCH_URLS
+    
+    async with aiohttp.ClientSession() as session:
+        # Create tasks for all URLs in the dict
+        tasks = [
+            fetch_market_data(session, url, market_type)
+            for market_type, url in urls_dict.items()
+        ]
+        
+        # Execute all tasks concurrently
+        results = await asyncio.gather(*tasks)
+    
+    # Flatten all results into a single list
+    all_items = []
+    for items in results:
+        all_items.extend(items)
+    
+    return {
+        "marketwatch": all_items,
+    }
+
+
+
+
+async def main():
     timestamp = get_timestamp()
     export_dir = "export/market_watch"
-    data = get_market_watch_data()
+    data = await fetch_merged_data()
     save_path = f"{export_dir}/market_watch_{timestamp}.json"
     save_json(data, save_path)
 
 
 if __name__ == "__main__":
-    main()
+    asyncio.run(main())
