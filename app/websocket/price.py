@@ -28,7 +28,7 @@ class PriceConnectionManager:
 manager = PriceConnectionManager()
 
 
-@router.get("/ws-test", response_class=HTMLResponse)
+@router.get("/ws-test", response_class=HTMLResponse, include_in_schema=False)
 async def websocket_test_page():
     """Simple HTML page to test WebSocket price updates."""
     return """
