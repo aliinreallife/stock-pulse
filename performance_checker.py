@@ -6,7 +6,7 @@ from typing import Dict, List, Any, Optional
 from dataclasses import dataclass
 
 from get_market_watch_data import get_market_watch_data
-from get_instrument_data import get_price_change
+from get_instrument_data import get_price
 
 
 @dataclass
@@ -92,7 +92,7 @@ class PerformanceChecker:
             config_desc = f" (with optimizations: {', '.join(enabled) if enabled else 'none'})"
         
         print(f"Running performance test for get_price_change with ins_code: {ins_code}{config_desc}...")
-        result = self.measure_execution_time(get_price_change, ins_code, optimization_config=optimization_config)
+        result = self.measure_execution_time(get_price, ins_code, optimization_config=optimization_config)
         print(f"Price change fetch completed in {result['execution_time_seconds']:.3f} seconds")
         return result
     
