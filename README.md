@@ -17,7 +17,7 @@ Real-time stock market data from TSETMC, because their API documentation doesn't
 
 1. **Clone and setup:**
    ```bash
-   git clone <repository-url>
+   git clone git@github.com:aliinreallife/stock-pulse.git
    cd stock-pulse
    cp env.example .env
    ```
