@@ -1,0 +1,44 @@
+services:
+  # Redis service
+  redis:
+    image: redis:8.2.2-alpine
+    container_name: stock-pulse-redis
+    ports:
+      - "6379:6379"
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Stock Pulse API service
+  api:
+    build: .
+    container_name: stock-pulse-api
+    ports:
+      - "8000:8000"
+    volumes:
+      - app_data:/app/data  # Persist SQLite database
+    environment:
+      - REDIS_URL=redis://redis:6379/0
+      - REDIS_ENABLED=true
+      - DATABASE_PATH=/app/data/market_watch.db
+      - API_HOST=0.0.0.0
+      - API_PORT=8000
+      - DEBUG=true
+    depends_on:
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+volumes:
+  app_data:
+    driver: local
+
