@@ -67,7 +67,7 @@ app = FastAPI(
 db = MarketWatchDB()
 
 # Root endpoint
-@app.get("/")
+@app.get("/", include_in_schema=False)
 async def root():
     return {"message": "Stock Pulse", "status": "running"}
 
