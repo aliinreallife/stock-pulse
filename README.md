@@ -56,3 +56,7 @@ Real-time stock market data from TSETMC, because their API documentation doesn't
 - `GET /market-status` - Check if market is open
 - `WS /ws/price?ins_code={code}` - WebSocket for live prices
 
+
+
+> [!NOTE]  
+> If you read this far, I should let you know I don’t fully understand how to use `async` and `await` yet.
