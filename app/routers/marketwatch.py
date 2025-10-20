@@ -13,10 +13,12 @@ router = APIRouter()
 db = MarketWatchDB()
 
 
-async def _backfill_snapshot_async(data_dict: dict, mw_resp: MarketWatchResponse) -> None:
+async def _backfill_snapshot_async(mw_resp: MarketWatchResponse) -> None:
     """Backfill Redis snapshot and pdv hot keys in the background."""
     try:
         r = await get_redis()
+        # Use the Pydantic model's dict() method for consistency
+        data_dict = mw_resp.model_dump()
         await r.set("mw:snapshot", orjson.dumps(data_dict), ex=REDIS_TTL_SECONDS)
         pipe = r.pipeline()
         for it in mw_resp.marketwatch:
@@ -49,12 +51,11 @@ async def get_market_watch():
                 print("marketwatch live")
         else:
             mw_resp = await asyncio.to_thread(db.get_market_watch_from_db)
-            data_dict = mw_resp.model_dump()
             if DEBUG:
                 print("marketwatch db")
 
         # Fire-and-forget backfill after sending response
-        asyncio.create_task(_backfill_snapshot_async(data_dict, mw_resp))
+        asyncio.create_task(_backfill_snapshot_async(mw_resp))
         return mw_resp
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Server error: {str(e)}")
