@@ -51,8 +51,6 @@ def main():
     data = get_market_watch_data()
     save_path = f"{export_dir}/market_watch_{timestamp}.json"
     save_json(data, save_path)
-    print(f"Saved merged data → {save_path}")
-    print(f"Total unique insCodes: {len(data.get('unique_insCodes', []))}")
 
 
 if __name__ == "__main__":
