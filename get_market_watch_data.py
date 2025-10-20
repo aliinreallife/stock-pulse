@@ -3,6 +3,7 @@ import aiohttp
 import orjson
 from utils import save_json, get_timestamp
 from config import MARKETWATCH_URLS
+from schemas import ClientTypeResponse
 
 
 def _extract_items(data: dict):
@@ -23,6 +24,15 @@ async def fetch_market_data(session: aiohttp.ClientSession, url: str, market_typ
     for item in items:
         item["market_type"] = market_type
     return items
+
+
+async def fetch_client_type_data(session: aiohttp.ClientSession) -> dict:
+    """Fetch client type data from TSETMC API."""
+    url = "https://cdn.tsetmc.com/api/ClientType/GetClientTypeAll"
+    async with session.get(url, timeout=30) as resp:
+        resp.raise_for_status()
+        raw = await resp.read()
+    return orjson.loads(raw)
 
 
 async def fetch_merged_data(urls_dict: dict = None):
@@ -47,6 +57,18 @@ async def fetch_merged_data(urls_dict: dict = None):
     
     return {
         "marketwatch": all_items,
+    }
+
+
+async def fetch_additional_data():
+    """Fetch additional data (client type) from TSETMC API."""
+    async with aiohttp.ClientSession() as session:
+        client_type_data = await fetch_client_type_data(session)
+    
+    # Parse and return as dict for easy storage
+    client_type_response = ClientTypeResponse(**client_type_data)
+    return {
+        "additional_data": [item.model_dump() for item in client_type_response.clientTypeAllDto]
     }
 
 

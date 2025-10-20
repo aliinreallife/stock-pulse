@@ -69,9 +69,38 @@ class MarketWatchDB:
                     qTotTran5J REAL,
                     qTotCap REAL,
                     best_limits_json TEXT,
+                    market_type TEXT,
                     updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
                 )
             """)
+            
+            # Create additional_data table for client type data
+            cursor.execute("""
+                CREATE TABLE IF NOT EXISTS additional_data (
+                    insCode TEXT PRIMARY KEY,
+                    buy_I_Volume INTEGER,
+                    buy_N_Volume INTEGER,
+                    buy_DDD_Volume INTEGER,
+                    buy_CountI INTEGER,
+                    buy_CountN INTEGER,
+                    buy_CountDDD INTEGER,
+                    sell_I_Volume INTEGER,
+                    sell_N_Volume INTEGER,
+                    sell_CountI INTEGER,
+                    sell_CountN INTEGER,
+                    updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+                )
+            """)
+            
+            # Add market_type column if it doesn't exist (migration)
+            try:
+                cursor.execute("ALTER TABLE instruments ADD COLUMN market_type TEXT")
+                print("Added market_type column to existing database")
+            except sqlite3.OperationalError as e:
+                if "duplicate column name" in str(e).lower():
+                    print("market_type column already exists")
+                else:
+                    print(f"Error adding market_type column: {e}")
             
             conn.commit()
     
@@ -149,6 +178,7 @@ class MarketWatchDB:
                 inst.qTotTran5J,
                 inst.qTotCap,
                 best_limits_json,
+                getattr(inst, 'market_type', None),  # Get market_type if it exists
                 datetime.now().isoformat()
             ))
         cursor.executemany(
@@ -157,9 +187,9 @@ class MarketWatchDB:
                 insCode, lva, lvc, eps, pe, pmd, pmo, qtj, pdv, ztt, qtc, bv, pc, pcpc,
                 pmn, pmx, py, pf, pcl, vc, csv, insID, pMax, pMin, ztd, dEven, hEven,
                 pClosing, iClose, yClose, pDrCotVal, zTotTran, qTotTran5J, qTotCap,
-                best_limits_json, updated_at
+                best_limits_json, market_type, updated_at
             ) VALUES (
-                ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
+                ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
             )
             ON CONFLICT(insCode) DO UPDATE SET
                 lva=excluded.lva,
@@ -196,6 +226,7 @@ class MarketWatchDB:
                 qTotTran5J=excluded.qTotTran5J,
                 qTotCap=excluded.qTotCap,
                 best_limits_json=excluded.best_limits_json,
+                market_type=excluded.market_type,
                 updated_at=excluded.updated_at
             """,
             rows,
@@ -210,7 +241,7 @@ class MarketWatchDB:
                 SELECT lva, lvc, eps, pe, pmd, pmo, qtj, pdv, ztt, qtc, bv, pc, pcpc,
                        pmn, pmx, py, pf, pcl, vc, csv, insID, pMax, pMin, ztd,
                        dEven, hEven, pClosing, iClose, yClose, pDrCotVal, zTotTran,
-                       qTotTran5J, qTotCap, best_limits_json, insCode
+                       qTotTran5J, qTotCap, best_limits_json, market_type, insCode
                 FROM instruments
                 """
             )
@@ -222,7 +253,7 @@ class MarketWatchDB:
                 'lva', 'lvc', 'eps', 'pe', 'pmd', 'pmo', 'qtj', 'pdv', 'ztt', 'qtc', 'bv', 'pc', 'pcpc',
                 'pmn', 'pmx', 'py', 'pf', 'pcl', 'vc', 'csv', 'insID', 'pMax', 'pMin', 'ztd',
                 'dEven', 'hEven', 'pClosing', 'iClose', 'yClose', 'pDrCotVal', 'zTotTran',
-                'qTotTran5J', 'qTotCap', 'best_limits_json', 'insCode'
+                'qTotTran5J', 'qTotCap', 'best_limits_json', 'market_type', 'insCode'
             ]
             
             for row in rows:
@@ -242,7 +273,8 @@ class MarketWatchDB:
                     ztd=data['ztd'], blDs=best_limits, id=0, insCode=data['insCode'],
                     dEven=data['dEven'], hEven=data['hEven'], pClosing=data['pClosing'],
                     iClose=data['iClose'], yClose=data['yClose'], pDrCotVal=data['pDrCotVal'],
-                    zTotTran=data['zTotTran'], qTotTran5J=data['qTotTran5J'], qTotCap=data['qTotCap']
+                    zTotTran=data['zTotTran'], qTotTran5J=data['qTotTran5J'], qTotCap=data['qTotCap'],
+                    market_type=data['market_type']
                 ))
             return MarketWatchResponse(marketwatch=items)
     
@@ -267,7 +299,87 @@ class MarketWatchDB:
             result = cursor.fetchone()
             return result[0] if result else None
     
+    def save_additional_data(self, additional_data: List[Dict[str, Any]]) -> int:
+        """
+        Save additional data (client type) to additional_data table.
+        
+        Args:
+            additional_data: List of additional data items
+            
+        Returns:
+            Number of records saved
+        """
+        if not additional_data:
+            return 0
+            
+        with sqlite3.connect(self.db_path) as conn:
+            cursor = conn.cursor()
+            
+            # Transactional delete-then-insert for full replacement
+            try:
+                # Delete all existing additional data
+                cursor.execute("DELETE FROM additional_data")
+                
+                # Insert new data
+                rows = []
+                for item in additional_data:
+                    rows.append((
+                        item.get('insCode'),
+                        item.get('buy_I_Volume', 0),
+                        item.get('buy_N_Volume', 0),
+                        item.get('buy_DDD_Volume', 0),
+                        item.get('buy_CountI', 0),
+                        item.get('buy_CountN', 0),
+                        item.get('buy_CountDDD', 0),
+                        item.get('sell_I_Volume', 0),
+                        item.get('sell_N_Volume', 0),
+                        item.get('sell_CountI', 0),
+                        item.get('sell_CountN', 0),
+                        datetime.now().isoformat()
+                    ))
+                
+                cursor.executemany("""
+                    INSERT INTO additional_data (
+                        insCode, buy_I_Volume, buy_N_Volume, buy_DDD_Volume,
+                        buy_CountI, buy_CountN, buy_CountDDD,
+                        sell_I_Volume, sell_N_Volume, sell_CountI, sell_CountN,
+                        updated_at
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                """, rows)
+                
+                conn.commit()
+                print(f"Additional data saved to database: {len(rows)} records")
+                return len(rows)
+                
+            except Exception as e:
+                conn.rollback()
+                print(f"Error saving additional data: {e}")
+                raise
     
+    def get_additional_data_from_db(self) -> List[Dict[str, Any]]:
+        """
+        Get all additional data from database.
+        
+        Returns:
+            List of additional data items
+        """
+        with sqlite3.connect(self.db_path) as conn:
+            cursor = conn.cursor()
+            cursor.execute("""
+                SELECT insCode, buy_I_Volume, buy_N_Volume, buy_DDD_Volume,
+                       buy_CountI, buy_CountN, buy_CountDDD,
+                       sell_I_Volume, sell_N_Volume, sell_CountI, sell_CountN
+                FROM additional_data
+            """)
+            
+            rows = cursor.fetchall()
+            columns = [
+                'insCode', 'buy_I_Volume', 'buy_N_Volume', 'buy_DDD_Volume',
+                'buy_CountI', 'buy_CountN', 'buy_CountDDD',
+                'sell_I_Volume', 'sell_N_Volume', 'sell_CountI', 'sell_CountN'
+            ]
+            
+            return [dict(zip(columns, row)) for row in rows]
     
     def get_database_stats(self) -> Dict[str, Any]:
         """Get database statistics."""

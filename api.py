@@ -21,7 +21,7 @@ from config import (
 )
 from database import MarketWatchDB
 from get_instrument_data import get_price
-from get_market_watch_data import fetch_merged_data
+from get_market_watch_data import fetch_merged_data, fetch_additional_data
 from schemas import MarketStatusResponse, MarketWatchResponse, PriceResponse
 from utils import is_market_open
 
@@ -93,6 +93,40 @@ async def _save_snapshot_if_valid():
         traceback.print_exc()
 
 
+async def _save_additional_data_if_valid():
+    """Fetch additional data and save to Redis and DB if valid."""
+    try:
+        print("Fetching additional data...")
+        # Add timeout to prevent hanging on slow API
+        additional_data = await asyncio.wait_for(fetch_additional_data(), timeout=30.0)
+        additional_list = additional_data.get('additional_data', [])
+        print(f"Additional data fetched successfully, items: {len(additional_list)}")
+
+        if additional_list:
+            # Save to database
+            try:
+                await asyncio.to_thread(db.save_additional_data, additional_list)
+                print("Additional data saved to database")
+            except Exception as db_err:
+                print(f"Database save failed: {db_err}")
+
+            # Cache in Redis with 2m TTL (best-effort)
+            try:
+                r = await get_redis()
+                await r.set("mw:additional_data", orjson.dumps(additional_data), ex=120)
+                print("Additional data saved to Redis")
+            except Exception as redis_err:
+                print(f"Redis caching failed: {redis_err}")
+        else:
+            print("No additional data to save")
+    except asyncio.TimeoutError:
+        print("Additional data fetch timed out after 30s - skipping")
+    except Exception as e:
+        print(f"Additional data save failed: {e}")
+        import traceback
+        traceback.print_exc()
+
+
 async def _market_close_watcher():
     """Save once at each 12:30 Tehran close; also save once if starting while closed."""
     # On startup, if closed, save once (non-blocking)
@@ -101,10 +135,11 @@ async def _market_close_watcher():
         print(f"Market open on startup: {app.state._last_market_open}")
         if not app.state._last_market_open:
             print(
-                "Market is closed on startup. Saving initial snapshot in background..."
+                "Market is closed on startup. Saving initial snapshot and additional data in background..."
             )
             # Run in background to not block startup
             asyncio.create_task(_save_snapshot_if_valid())
+            asyncio.create_task(_save_additional_data_if_valid())
     except Exception as e:
         print(f"initial market state check failed: {e}")
 
@@ -127,8 +162,9 @@ async def _market_close_watcher():
             # At/after scheduled close → save once per day
             now_teh = datetime.now(TEHRAN_TZ)
             if app.state._last_snapshot_date != now_teh.date():
-                print(f"Market close time reached. Saving snapshot...")
+                print(f"Market close time reached. Saving snapshot and additional data...")
                 await _save_snapshot_if_valid()
+                await _save_additional_data_if_valid()
                 app.state._last_snapshot_date = now_teh.date()
         except Exception as e:
             print(f"market watcher error: {e}")

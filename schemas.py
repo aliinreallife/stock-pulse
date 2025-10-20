@@ -147,3 +147,30 @@ class PriceResponse(BaseModel):
 
 class MarketStatusResponse(BaseModel):
     is_market_open: bool
+
+
+class ClientTypeItem(BaseModel):
+    insCode: str
+    buy_I_Volume: int
+    buy_N_Volume: int
+    buy_DDD_Volume: int
+    buy_CountI: int
+    buy_CountN: int
+    buy_CountDDD: int
+    sell_I_Volume: int
+    sell_N_Volume: int
+    sell_CountI: int
+    sell_CountN: int
+
+
+class ClientTypeResponse(BaseModel):
+    clientTypeAllDto: List[ClientTypeItem]
+
+
+class MarketWatchItemWithAdditionalData(MarketWatchItem):
+    """MarketWatchItem with additional client type information."""
+    additional_data: Optional[ClientTypeItem] = None
+
+
+class MarketWatchWithAdditionalDataResponse(BaseModel):
+    marketwatch: List[MarketWatchItemWithAdditionalData]
