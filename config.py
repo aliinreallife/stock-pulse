@@ -25,15 +25,36 @@ DATABASE_PATH = os.getenv("DATABASE_PATH", "data/market_watch.db")
 # Redis configuration
 REDIS_URL = os.getenv("REDIS_URL", "redis://localhost:6379/0")
 REDIS_TTL_SECONDS = int(os.getenv("REDIS_TTL_SECONDS", "120"))
+REDIS_ENABLED = os.getenv("REDIS_ENABLED", "true").lower() == "true"
 
 # Redis client (async) - shared accessor
 _redis = None
+_redis_available = None
 
 
 async def get_redis():
-    global _redis
+    """Get Redis client if available, return None if Redis is disabled or unavailable."""
+    global _redis, _redis_available
+    
+    if not REDIS_ENABLED:
+        return None
+    
+    if _redis_available is False:
+        return None
+    
     if _redis is None:
-        _redis = await redis.from_url(REDIS_URL, decode_responses=True)
+        try:
+            _redis = await redis.from_url(REDIS_URL, decode_responses=True)
+            # Test connection
+            await _redis.ping()
+            _redis_available = True
+        except Exception as e:
+            if DEBUG:
+                print(f"Redis connection failed: {e}")
+            _redis_available = False
+            _redis = None
+            return None
+    
     return _redis
 
 

@@ -17,6 +17,8 @@ async def _backfill_snapshot_async(mw_resp: MarketWatchResponse) -> None:
     """Backfill Redis snapshot and pdv hot keys in the background."""
     try:
         r = await get_redis()
+        if r is None:
+            return  # Redis not available
         # Use the Pydantic model's dict() method for consistency
         data_dict = mw_resp.model_dump()
         await r.set("mw:snapshot", orjson.dumps(data_dict), ex=REDIS_TTL_SECONDS)
@@ -32,16 +34,16 @@ async def _backfill_snapshot_async(mw_resp: MarketWatchResponse) -> None:
 async def get_market_watch():
     try:
         # Try Redis snapshot first (open/closed)
-        r = None
-        try:
-            r = await get_redis()
-            blob = await r.get("mw:snapshot")
-            if blob:
-                if DEBUG:
-                    print("marketwatch redis")
-                return MarketWatchResponse(**json.loads(blob))
-        except Exception:
-            r = None
+        r = await get_redis()
+        if r is not None:
+            try:
+                blob = await r.get("mw:snapshot")
+                if blob:
+                    if DEBUG:
+                        print("marketwatch redis")
+                    return MarketWatchResponse(**json.loads(blob))
+            except Exception:
+                pass
 
         # Cache miss → fetch from source
         if is_market_open():
@@ -79,25 +81,26 @@ async def get_market_watch_with_additional_data():
         additional_from_redis = False
         
         # Try Redis for both market watch and additional data
-        try:
-            r = await get_redis()
-            mw_blob = await r.get("mw:snapshot")
-            additional_blob = await r.get("mw:additional_data")
-            
-            if mw_blob:
-                mw_resp = MarketWatchResponse(**json.loads(mw_blob))
-                mw_from_redis = True
-                if DEBUG:
-                    print("marketwatch from redis")
-            
-            if additional_blob:
-                additional_data = json.loads(additional_blob)
-                additional_from_redis = True
-                if DEBUG:
-                    print("additional data from redis")
-                    
-        except Exception:
-            pass
+        r = await get_redis()
+        if r is not None:
+            try:
+                mw_blob = await r.get("mw:snapshot")
+                additional_blob = await r.get("mw:additional_data")
+                
+                if mw_blob:
+                    mw_resp = MarketWatchResponse(**json.loads(mw_blob))
+                    mw_from_redis = True
+                    if DEBUG:
+                        print("marketwatch from redis")
+                
+                if additional_blob:
+                    additional_data = json.loads(additional_blob)
+                    additional_from_redis = True
+                    if DEBUG:
+                        print("additional data from redis")
+                        
+            except Exception:
+                pass
         
         # Fetch missing data based on what we have
         if mw_resp is None:
@@ -159,6 +162,8 @@ async def _backfill_additional_data_async(additional_data: dict) -> None:
     """Backfill Redis with additional data in the background."""
     try:
         r = await get_redis()
+        if r is None:
+            return  # Redis not available
         await r.set("mw:additional_data", orjson.dumps(additional_data), ex=REDIS_TTL_SECONDS)
     except Exception:
         # best-effort cache write; ignore errors

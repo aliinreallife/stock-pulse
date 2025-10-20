@@ -92,15 +92,6 @@ class MarketWatchDB:
                 )
             """)
             
-            # Add market_type column if it doesn't exist (migration)
-            try:
-                cursor.execute("ALTER TABLE instruments ADD COLUMN market_type TEXT")
-                print("Added market_type column to existing database")
-            except sqlite3.OperationalError as e:
-                if "duplicate column name" in str(e).lower():
-                    print("market_type column already exists")
-                else:
-                    print(f"Error adding market_type column: {e}")
             
             conn.commit()
     

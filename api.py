@@ -5,7 +5,6 @@ from datetime import datetime, timedelta
 from typing import List
 
 import orjson
-import requests
 from fastapi import FastAPI, HTTPException, Query, WebSocket, WebSocketDisconnect
 from fastapi.responses import HTMLResponse
 
@@ -71,19 +70,22 @@ async def _save_snapshot_if_valid():
         print("Market watch data saved to database")
 
         # Cache in Redis with 2m TTL (best-effort)
-        try:
-            r = await get_redis()
-            await r.set("mw:snapshot", orjson.dumps(data_dict), ex=120)
-            print("Market watch snapshot saved to Redis")
+        r = await get_redis()
+        if r is not None:
+            try:
+                await r.set("mw:snapshot", orjson.dumps(data_dict), ex=120)
+                print("Market watch snapshot saved to Redis")
 
-            pipe = r.pipeline()
-            for it in mw.marketwatch:
-                # store numeric values as strings
-                pipe.set(f"mw:inst:{it.insCode}:pdv", str(it.pdv), ex=120)
-            await pipe.execute()
+                pipe = r.pipeline()
+                for it in mw.marketwatch:
+                    # store numeric values as strings
+                    pipe.set(f"mw:inst:{it.insCode}:pdv", str(it.pdv), ex=120)
+                await pipe.execute()
 
-        except Exception as redis_err:
-            print(f"Redis caching failed: {redis_err}")
+            except Exception as redis_err:
+                print(f"Redis caching failed: {redis_err}")
+        else:
+            print("Redis not available - skipping cache")
     except asyncio.TimeoutError:
         print("Market watch data fetch timed out after 30s - skipping snapshot")
     except Exception as e:
@@ -111,12 +113,15 @@ async def _save_additional_data_if_valid():
                 print(f"Database save failed: {db_err}")
 
             # Cache in Redis with 2m TTL (best-effort)
-            try:
-                r = await get_redis()
-                await r.set("mw:additional_data", orjson.dumps(additional_data), ex=120)
-                print("Additional data saved to Redis")
-            except Exception as redis_err:
-                print(f"Redis caching failed: {redis_err}")
+            r = await get_redis()
+            if r is not None:
+                try:
+                    await r.set("mw:additional_data", orjson.dumps(additional_data), ex=120)
+                    print("Additional data saved to Redis")
+                except Exception as redis_err:
+                    print(f"Redis caching failed: {redis_err}")
+            else:
+                print("Redis not available - skipping additional data cache")
         else:
             print("No additional data to save")
     except asyncio.TimeoutError:

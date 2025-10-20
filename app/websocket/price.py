@@ -164,50 +164,54 @@ async def price_websocket(websocket: WebSocket, ins_code: str):
             if is_market_open():
                 value = None
                 from_redis = False
-                try:
-                    r = await get_redis()
-                    if DEBUG:
-                        print(f"price from redis: {ins_code}")
-                    v = await r.get(f"mw:inst:{ins_code}:price")
-                    if v is not None:
-                        value = float(v)
-                        from_redis = True
-                except Exception:
-                    pass
+                r = await get_redis()
+                if r is not None:
+                    try:
+                        if DEBUG:
+                            print(f"price from redis: {ins_code}")
+                        v = await r.get(f"mw:inst:{ins_code}:price")
+                        if v is not None:
+                            value = float(v)
+                            from_redis = True
+                    except Exception:
+                        pass
                 if value is None:
                     value = await get_price(ins_code_int)
                     if DEBUG:
                         print(f"price from api: {ins_code}")
-                    try:
-                        r = await get_redis()
-                        if DEBUG:
-                            print(f"price to redis: {ins_code}")
-                        await r.set(f"mw:inst:{ins_code}:price", str(value), ex=REDIS_TTL_SECONDS)
-                    except Exception:
-                        pass
+                    r = await get_redis()
+                    if r is not None:
+                        try:
+                            if DEBUG:
+                                print(f"price to redis: {ins_code}")
+                            await r.set(f"mw:inst:{ins_code}:price", str(value), ex=REDIS_TTL_SECONDS)
+                        except Exception:
+                            pass
             else:
                 value = None
                 from_redis = False
-                try:
-                    r = await get_redis()
-                    v = await r.get(f"mw:inst:{ins_code}:pdv")
-                    if v is not None:
-                        value = float(v)
-                        from_redis = True
-                        if DEBUG:
-                            print(f"pdv from redis: {ins_code}")
-                except Exception:
-                    pass
+                r = await get_redis()
+                if r is not None:
+                    try:
+                        v = await r.get(f"mw:inst:{ins_code}:pdv")
+                        if v is not None:
+                            value = float(v)
+                            from_redis = True
+                            if DEBUG:
+                                print(f"pdv from redis: {ins_code}")
+                    except Exception:
+                        pass
                 if value is None:
                     value = await asyncio.to_thread(db.get_pdv_by_ins_code, ins_code)
                     if DEBUG:
                         print(f"pdv from db: {ins_code}")
-                    try:
-                        if value is not None:
-                            r = await get_redis()
-                            await r.set(f"mw:inst:{ins_code}:pdv", str(value), ex=REDIS_TTL_SECONDS)
-                    except Exception:
-                        pass
+                    if value is not None:
+                        r = await get_redis()
+                        if r is not None:
+                            try:
+                                await r.set(f"mw:inst:{ins_code}:pdv", str(value), ex=REDIS_TTL_SECONDS)
+                            except Exception:
+                                pass
                 if value is None:
                     value = 0.0
 
