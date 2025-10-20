@@ -1,21 +1,24 @@
 import asyncio
-from datetime import datetime, timedelta
-from contextlib import asynccontextmanager, suppress
 import json
-import requests
-from fastapi import FastAPI, HTTPException, Query, WebSocket, WebSocketDisconnect
-from fastapi.responses import HTMLResponse
+from contextlib import asynccontextmanager, suppress
+from datetime import datetime, timedelta
 from typing import List
 
+import orjson
+import requests
+from fastapi import (FastAPI, HTTPException, Query, WebSocket,
+                     WebSocketDisconnect)
+from fastapi.responses import HTMLResponse
+
+from app.routers.marketwatch import router as market_router
+from app.websocket.price import router as ws_router
+from config import (API_HOST, API_PORT, MARKET_CLOSE_TIME, TEHRAN_TZ,
+                    WEBSOCKET_UPDATE_INTERVAL, get_redis)
+from database import MarketWatchDB
 from get_instrument_data import get_price
 from get_market_watch_data import get_market_watch_data
-from schemas import MarketWatchResponse, PriceResponse, MarketStatusResponse
+from schemas import MarketStatusResponse, MarketWatchResponse, PriceResponse
 from utils import is_market_open
-from config import TEHRAN_TZ, MARKET_CLOSE_TIME
-from redis_client import get_redis
-import orjson
-from database import MarketWatchDB
-from config import API_HOST, API_PORT, WEBSOCKET_UPDATE_INTERVAL
 
 
 @asynccontextmanager
@@ -36,6 +39,10 @@ app = FastAPI(
     title="Stock Pulse API", description="Get instrument price data", lifespan=lifespan
 )
 db = MarketWatchDB()
+
+# Register routers
+app.include_router(market_router)
+app.include_router(ws_router)
 
 
 async def _save_snapshot_if_valid():
@@ -111,237 +118,6 @@ async def _market_close_watcher():
         except Exception as e:
             print(f"market watcher error: {e}")
             await asyncio.sleep(60)
-
-
-## Startup handled via lifespan above
-
-
-@app.get("/marketwatch", response_model=MarketWatchResponse)
-async def get_market_watch():
-    """Get full market watch data.
-    - Market open: fetch live
-    - Market closed: serve from DB
-    """
-    try:
-        if is_market_open():
-            data = await asyncio.to_thread(get_market_watch_data)
-            print("marketwatch live")
-            # refresh redis live snapshot best-effort with 2-minute TTL
-            try:
-                r = await get_redis()
-                await r.set("mw:snapshot", orjson.dumps(data), ex=120)
-            except Exception:
-                pass
-            return MarketWatchResponse(**data)
-        # Closed → from DB
-        else:
-            # try redis snapshot first
-            try:
-                r = await get_redis()
-                blob = await r.get("mw:snapshot")
-                if blob:
-                    print("marketwatch redis")
-                    # decode-responses=True returns str; use json.loads
-                    return MarketWatchResponse(**json.loads(blob))
-                else:
-                    print("Redis key 'mw:snapshot' not found")
-            except Exception as redis_err:
-                print(f"Redis read failed: {redis_err}")
-
-            # fallback to DB, then backfill Redis (2m TTL)
-            print("Fetching from database...")
-            mw = db.get_market_watch_from_db()
-            try:
-                r = await get_redis()
-                await r.set("mw:snapshot", orjson.dumps(mw.model_dump()), ex=120)
-                pipe = r.pipeline()
-                for it in mw.marketwatch:
-                    pipe.set(f"mw:inst:{it.insCode}:pdv", str(it.pdv), ex=120)
-                await pipe.execute()
-                print("Backfilled Redis from database")
-            except Exception:
-                pass
-            return mw
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Server error: {str(e)}")
-
-
-@app.get("/market-status", response_model=MarketStatusResponse)
-async def get_market_status():
-    """Return current market open/closed status."""
-    try:
-        return MarketStatusResponse(is_market_open=is_market_open())
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Server error: {str(e)}")
-
-
-@app.get("/debug/market-open")
-async def debug_market_open():
-    """Debug market open status."""
-    now_teh = datetime.now(TEHRAN_TZ)
-    return {
-        "current_time_tehran": now_teh.isoformat(),
-        "market_close_time": MARKET_CLOSE_TIME.isoformat(),
-        "is_market_open": is_market_open(),
-        "timezone": str(TEHRAN_TZ),
-    }
-
-
-@app.post("/debug/warm-cache")
-async def warm_cache():
-    """Manually warm up the Redis cache from database."""
-    try:
-        print("Manually warming up cache...")
-        await _save_snapshot_if_valid()
-        return {"status": "Cache warmed successfully"}
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Cache warm failed: {str(e)}")
-
-
-@app.get("/debug/redis-check")
-async def check_redis():
-    """Check Redis connection and cached data."""
-    try:
-        r = await get_redis()
-
-        # Try to get the snapshot
-        blob = await r.get("mw:snapshot")
-
-        # Count individual instrument caches
-        keys = await r.keys("mw:inst:*:pdv")
-
-        return {
-            "redis_connected": True,
-            "snapshot_exists": blob is not None,
-            "snapshot_size_bytes": len(blob) if blob else 0,
-            "cached_instruments": len(keys) if keys else 0,
-        }
-    except Exception as e:
-        return {
-            "redis_connected": False,
-            "error": str(e),
-        }
-
-
-class PriceConnectionManager:
-    """Manages WebSocket connections for price updates."""
-
-    def __init__(self):
-        self.active_connections: List[WebSocket] = []
-
-    async def connect(self, websocket: WebSocket):
-        await websocket.accept()
-        self.active_connections.append(websocket)
-
-    def disconnect(self, websocket: WebSocket):
-        if websocket in self.active_connections:
-            self.active_connections.remove(websocket)
-
-
-manager = PriceConnectionManager()
-
-
-@app.websocket("/ws/price")
-async def price_websocket(websocket: WebSocket, ins_code: str):
-    """
-    Stream price change percentage (pDrCotVal) for a specific instrument.
-    Usage:
-        ws://localhost:8000/ws/price?ins_code=28854105556435129
-    """
-    await manager.connect(websocket)
-    try:
-        ins_code_int = int(ins_code)
-        while True:
-            # Closed → read pdv from DB; Open → live pDrCotVal
-            if is_market_open():
-                # Open hours: cache and use get_price (actual price) under a dedicated key
-                value = None
-                from_redis = False
-                try:
-                    r = await get_redis()
-                    v = await r.get(f"mw:inst:{ins_code}:price")
-                    if v is not None:
-                        value = float(v)
-                        from_redis = True
-                except Exception:
-                    pass
-
-                if value is None:
-                    value = get_price(ins_code_int)
-                    try:
-                        r = await get_redis()
-                        await r.set(f"mw:inst:{ins_code}:price", str(value), ex=120)
-                    except Exception:
-                        pass
-
-                print("price from redis" if from_redis else "price from live")
-            else:
-                # closed: try redis hot field, fallback to db; set 2-minute TTL on writes
-                value = None
-                from_redis = False
-                try:
-                    r = await get_redis()
-                    v = await r.get(f"mw:inst:{ins_code}:pdv")
-                    if v is not None:
-                        value = float(v)
-                        from_redis = True
-                except Exception:
-                    pass
-
-                if value is None:
-                    value = db.get_pdv_by_ins_code(ins_code)
-                    try:
-                        if value is not None:
-                            r = await get_redis()
-                            await r.set(f"mw:inst:{ins_code}:pdv", str(value), ex=120)
-                    except Exception:
-                        pass
-
-                if value is None:
-                    # fallback minimal
-                    value = 0.0
-
-                print("price from redis" if from_redis else "price from db")
-
-            await websocket.send_text(str(value))
-            await asyncio.sleep(WEBSOCKET_UPDATE_INTERVAL)
-    except WebSocketDisconnect:
-        print("Client disconnected")
-    except Exception as e:
-        print(f"Error: {e}")
-    finally:
-        manager.disconnect(websocket)
-
-
-@app.get("/ws-price-test", response_class=HTMLResponse, include_in_schema=False)
-async def price_websocket_test():
-    """Simple test page for price WebSocket."""
-    html_content = """
-    <html>
-    <body>
-        <h3>Price WebSocket Test</h3>
-        <input id="ins_code" value="28854105556435129" />
-        <button onclick="connect()">Connect</button>
-        <div id="log"></div>
-
-        <script>
-            let ws;
-            function connect() {
-                const insCode = document.getElementById('ins_code').value;
-                const log = document.getElementById('log');
-                log.innerHTML = `Connecting to ${insCode}...<br>`;
-                ws = new WebSocket(`ws://${location.host}/ws/price?ins_code=${insCode}`);
-                ws.onopen = () => log.innerHTML += "Connected<br>";
-                ws.onmessage = (e) => {
-                    log.innerHTML += e.data + "<br>";
-                };
-                ws.onclose = () => log.innerHTML += "Disconnected<br>";
-            }
-        </script>
-    </body>
-    </html>
-    """
-    return HTMLResponse(content=html_content)
 
 
 if __name__ == "__main__":
