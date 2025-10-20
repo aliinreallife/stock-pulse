@@ -47,7 +47,7 @@ async def price_websocket(websocket: WebSocket, ins_code: str):
                 except Exception:
                     pass
                 if value is None:
-                    value = get_price(ins_code_int)
+                    value = await get_price(ins_code_int)
                     if DEBUG:
                         print(f"price from api: {ins_code}")
                     try:
@@ -71,7 +71,7 @@ async def price_websocket(websocket: WebSocket, ins_code: str):
                 except Exception:
                     pass
                 if value is None:
-                    value = db.get_pdv_by_ins_code(ins_code)
+                    value = await asyncio.to_thread(db.get_pdv_by_ins_code, ins_code)
                     if DEBUG:
                         print(f"pdv from db: {ins_code}")
                     try:
