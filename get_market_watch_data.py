@@ -12,28 +12,41 @@ def _extract_items(data: dict):
     return data.get("marketwatch", [])
 
 
-async def fetch_json(session, url, market_type):
-    """Fetch and tag data with market type."""
+async def fetch_market_data(session: aiohttp.ClientSession, url: str, market_type: str) -> list:
+    """Fetch market data from TSETMC API and tag with market type."""
     async with session.get(url, timeout=30) as resp:
         resp.raise_for_status()
         raw = await resp.read()
     data = orjson.loads(raw)
     items = _extract_items(data)
-    for it in items:
-        it["market_type"] = market_type
+    # Tag each item with market type
+    for item in items:
+        item["market_type"] = market_type
     return items
 
 
-async def fetch_merged_data():
-    """Fetch paperType=1 and paperType=2 concurrently and merge results."""
+async def fetch_merged_data(urls_dict: dict = None):
+    """Fetch market data from multiple sources concurrently and merge results."""
+    if urls_dict is None:
+        urls_dict = MARKETWATCH_URLS
+    
     async with aiohttp.ClientSession() as session:
-        stock_items, base_items = await asyncio.gather(
-            fetch_json(session, MARKETWATCH_URLS["stock_market"], "stock_market"),
-            fetch_json(session, MARKETWATCH_URLS["base_market"], "base_market"),
-        )
-
+        # Create tasks for all URLs in the dict
+        tasks = [
+            fetch_market_data(session, url, market_type)
+            for market_type, url in urls_dict.items()
+        ]
+        
+        # Execute all tasks concurrently
+        results = await asyncio.gather(*tasks)
+    
+    # Flatten all results into a single list
+    all_items = []
+    for items in results:
+        all_items.extend(items)
+    
     return {
-        "marketwatch": stock_items + base_items,
+        "marketwatch": all_items,
     }
 
 

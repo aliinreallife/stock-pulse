@@ -63,9 +63,6 @@ MARKETWATCH_URLS = {
         f"{TSETMC_BASE}?market=0&industrialGroup=&paperTypes%5B0%5D=2"
         f"&showTraded=false&withBestLimits=true&hEven=0&RefID=0"
     ),
-    # Stock + Base combined (paperTypes[0]=1, paperTypes[1]=2)
-    "stock_base_combined": (
-        f"{TSETMC_BASE}?market=0&industrialGroup=&paperTypes%5B0%5D=1&paperTypes%5B1%5D=2"
-        f"&showTraded=false&withBestLimits=true&hEven=0&RefID=0"
-    ),
 }
+
+STOCK_BASE_COMBINED = f"{TSETMC_BASE}?market=0&industrialGroup=&paperTypes%5B0%5D=1&paperTypes%5B1%5D=2&showTraded=false&withBestLimits=true&hEven=0&RefID=0"
