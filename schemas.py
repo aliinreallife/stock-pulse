@@ -142,3 +142,7 @@ class MarketWatchResponse(BaseModel):
 
 class PriceResponse(BaseModel):
     pDrCotVal: float
+
+
+class MarketStatusResponse(BaseModel):
+    is_market_open: bool
