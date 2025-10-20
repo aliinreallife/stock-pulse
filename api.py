@@ -83,9 +83,7 @@ async def _save_snapshot_if_valid():
                 await pipe.execute()
 
             except Exception as redis_err:
-                print(f"Redis caching failed: {redis_err}")
-        else:
-            print("Redis not available - skipping cache")
+                print(f"Warning: Redis caching failed: {redis_err}")
     except asyncio.TimeoutError:
         print("Market watch data fetch timed out after 30s - skipping snapshot")
     except Exception as e:
@@ -119,9 +117,7 @@ async def _save_additional_data_if_valid():
                     await r.set("mw:additional_data", orjson.dumps(additional_data), ex=120)
                     print("Additional data saved to Redis")
                 except Exception as redis_err:
-                    print(f"Redis caching failed: {redis_err}")
-            else:
-                print("Redis not available - skipping additional data cache")
+                    print(f"Warning: Redis caching failed: {redis_err}")
         else:
             print("No additional data to save")
     except asyncio.TimeoutError:
