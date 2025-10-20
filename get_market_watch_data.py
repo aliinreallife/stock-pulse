@@ -2,10 +2,7 @@ import asyncio
 import aiohttp
 import orjson
 from utils import save_json, get_timestamp
-
-
-URL_T1 = "https://cdn.tsetmc.com/api/ClosingPrice/GetMarketWatch?market=0&industrialGroup=&paperTypes%5B0%5D=1&showTraded=false&withBestLimits=true&hEven=0&RefID=0"
-URL_T2 = "https://cdn.tsetmc.com/api/ClosingPrice/GetMarketWatch?market=0&industrialGroup=&paperTypes%5B0%5D=2&showTraded=false&withBestLimits=true&hEven=0&RefID=0"
+from config import MARKETWATCH_URLS
 
 
 def _extract_items(data: dict):
@@ -31,8 +28,8 @@ async def fetch_merged_data():
     """Fetch paperType=1 and paperType=2 concurrently and merge results."""
     async with aiohttp.ClientSession() as session:
         stock_items, base_items = await asyncio.gather(
-            fetch_json(session, URL_T1, "stock_market"),
-            fetch_json(session, URL_T2, "base_market"),
+            fetch_json(session, MARKETWATCH_URLS["stock_market"], "stock_market"),
+            fetch_json(session, MARKETWATCH_URLS["base_market"], "base_market"),
         )
 
     return {
