@@ -10,7 +10,7 @@ from typing import List, Optional, Dict, Any
 from pathlib import Path
 
 from schemas import MarketWatchItem, MarketWatchResponse, MarketWatchBestLimit
-from config import DATABASE_PATH, DATABASE_CLEANUP_DAYS
+from config import DATABASE_PATH
 
 
 class MarketWatchDB:
@@ -75,13 +75,12 @@ class MarketWatchDB:
             
             conn.commit()
     
-    def save_market_watch_data(self, data: MarketWatchResponse, market_closed_at: str) -> int:
+    def save_market_watch_data(self, data: MarketWatchResponse) -> int:
         """
         Save market watch data to instruments table.
         
         Args:
             data: MarketWatchResponse object containing market data
-            market_closed_at: ISO timestamp when market closed
             
         Returns:
             Number of instruments updated
