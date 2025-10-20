@@ -20,6 +20,9 @@ TRADING_DAYS = {0, 1, 2, 5, 6}  # Mon, Tue, Wed, Sat, Sun
 # Database configuration
 DATABASE_PATH = os.getenv("DATABASE_PATH", "data/market_watch.db")
 
+# Redis configuration
+REDIS_URL = os.getenv("REDIS_URL", "redis://localhost:6379/0")
+
 # API configuration
 API_HOST = os.getenv("API_HOST", "0.0.0.0")
 API_PORT = int(os.getenv("API_PORT", "8000"))
