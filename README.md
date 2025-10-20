@@ -47,6 +47,8 @@ Real-time stock market data from TSETMC, because their API documentation doesn't
    python main.py
    ```
 
+**Note:** If you don't have Redis installed, the app will automatically disable Redis caching and work with just the database. No configuration needed!
+
 ## API Endpoints
 
 - `GET /marketwatch` - Get market watch data
