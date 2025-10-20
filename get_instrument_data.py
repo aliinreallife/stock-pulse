@@ -51,25 +51,6 @@ async def get_price(ins_code: int) -> float:
     return data["closingPriceInfo"]["pDrCotVal"]
 
 
-# Synchronous wrappers for backward compatibility
-def get_closing_price_info_sync(ins_code: int) -> dict:
-    """Synchronous wrapper for get_closing_price_info."""
-    return asyncio.run(get_closing_price_info(ins_code))
-
-
-def get_best_limits_sync(ins_code: int) -> dict:
-    """Synchronous wrapper for get_best_limits."""
-    return asyncio.run(get_best_limits(ins_code))
-
-
-def get_trade_sync(ins_code: int) -> dict:
-    """Synchronous wrapper for get_trade."""
-    return asyncio.run(get_trade(ins_code))
-
-
-def get_price_sync(ins_code: int) -> float:
-    """Synchronous wrapper for get_price."""
-    return asyncio.run(get_price(ins_code))
 
 
 async def main():

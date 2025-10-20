@@ -50,18 +50,15 @@ async def fetch_merged_data(urls_dict: dict = None):
     }
 
 
-def get_market_watch_data():
-    """Synchronous wrapper for async fetch."""
-    return asyncio.run(fetch_merged_data())
 
 
-def main():
+async def main():
     timestamp = get_timestamp()
     export_dir = "export/market_watch"
-    data = get_market_watch_data()
+    data = await fetch_merged_data()
     save_path = f"{export_dir}/market_watch_{timestamp}.json"
     save_json(data, save_path)
 
 
 if __name__ == "__main__":
-    main()
+    asyncio.run(main())
