@@ -1,18 +1,48 @@
-import os
-from datetime import datetime
-
-import requests
+import asyncio
+import aiohttp
 import orjson
 from utils import save_json, get_timestamp
 
 
-def get_market_watch_data():
-    url = "https://cdn.tsetmc.com/api/ClosingPrice/GetMarketWatch?market=0&industrialGroup=&paperTypes%5B0%5D=1&paperTypes%5B1%5D=2&paperTypes%5B2%5D=3&paperTypes%5B3%5D=4&paperTypes%5B4%5D=5&paperTypes%5B5%5D=6&paperTypes%5B6%5D=7&paperTypes%5B7%5D=8&paperTypes%5B8%5D=9&showTraded=false&withBestLimits=true&hEven=0&RefID=0"
+URL_T1 = "https://cdn.tsetmc.com/api/ClosingPrice/GetMarketWatch?market=0&industrialGroup=&paperTypes%5B0%5D=1&showTraded=false&withBestLimits=true&hEven=0&RefID=0"
+URL_T2 = "https://cdn.tsetmc.com/api/ClosingPrice/GetMarketWatch?market=0&industrialGroup=&paperTypes%5B0%5D=2&showTraded=false&withBestLimits=true&hEven=0&RefID=0"
 
-    response = requests.get(url, timeout=30)  # 30 second timeout
-    # Use orjson for faster JSON parsing instead of response.json()
-    data = orjson.loads(response.content)
-    return data
+
+def _extract_items(data: dict):
+    """Safely extract marketwatch list."""
+    if not data:
+        return []
+    return data.get("marketwatch", [])
+
+
+async def fetch_json(session, url, market_type):
+    """Fetch and tag data with market type."""
+    async with session.get(url, timeout=30) as resp:
+        resp.raise_for_status()
+        raw = await resp.read()
+    data = orjson.loads(raw)
+    items = _extract_items(data)
+    for it in items:
+        it["market_type"] = market_type
+    return items
+
+
+async def fetch_merged_data():
+    """Fetch paperType=1 and paperType=2 concurrently and merge results."""
+    async with aiohttp.ClientSession() as session:
+        stock_items, base_items = await asyncio.gather(
+            fetch_json(session, URL_T1, "stock_market"),
+            fetch_json(session, URL_T2, "base_market"),
+        )
+
+    return {
+        "marketwatch": stock_items + base_items,
+    }
+
+
+def get_market_watch_data():
+    """Synchronous wrapper for async fetch."""
+    return asyncio.run(fetch_merged_data())
 
 
 def main():
@@ -21,6 +51,8 @@ def main():
     data = get_market_watch_data()
     save_path = f"{export_dir}/market_watch_{timestamp}.json"
     save_json(data, save_path)
+    print(f"Saved merged data → {save_path}")
+    print(f"Total unique insCodes: {len(data.get('unique_insCodes', []))}")
 
 
 if __name__ == "__main__":
