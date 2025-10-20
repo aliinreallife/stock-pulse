@@ -47,17 +47,12 @@ async def _save_snapshot_if_valid():
 
 
 async def _market_close_watcher():
-    """Background task: save once at each 12:30 Tehran close; save once if starting closed."""
-    # track last saved date to prevent duplicates
-    app.state._last_snapshot_date = None
-
+    """Save once at each 12:30 Tehran close; also save once if starting while closed."""
     # On startup, if closed, save once
     try:
-        now_teh = datetime.now(TEHRAN_TZ)
         app.state._last_market_open = is_market_open()
         if not app.state._last_market_open:
             await _save_snapshot_if_valid()
-            app.state._last_snapshot_date = now_teh.date()
     except Exception as e:
         print(f"initial market state check failed: {e}")
 
@@ -68,8 +63,7 @@ async def _market_close_watcher():
                                            minute=MARKET_CLOSE_TIME.minute,
                                            second=0, microsecond=0)
             if now_teh >= target_close:
-                # schedule next day's 12:30
-                target_close = target_close.replace(day=now_teh.day) + timedelta(days=1)
+                target_close += timedelta(days=1)
 
             sleep_seconds = (target_close - now_teh).total_seconds()
             if sleep_seconds > 0:
