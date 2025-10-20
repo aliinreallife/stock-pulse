@@ -3,3 +3,4 @@ pydantic
 uvicorn[standard]
 orjson
 pytz
+redis
