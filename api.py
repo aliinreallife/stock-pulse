@@ -6,14 +6,19 @@ from typing import List
 
 import orjson
 import requests
-from fastapi import (FastAPI, HTTPException, Query, WebSocket,
-                     WebSocketDisconnect)
+from fastapi import FastAPI, HTTPException, Query, WebSocket, WebSocketDisconnect
 from fastapi.responses import HTMLResponse
 
 from app.routers.marketwatch import router as market_router
 from app.websocket.price import router as ws_router
-from config import (API_HOST, API_PORT, MARKET_CLOSE_TIME, TEHRAN_TZ,
-                    WEBSOCKET_UPDATE_INTERVAL, get_redis)
+from config import (
+    API_HOST,
+    API_PORT,
+    MARKET_CLOSE_TIME,
+    TEHRAN_TZ,
+    WEBSOCKET_UPDATE_INTERVAL,
+    get_redis,
+)
 from database import MarketWatchDB
 from get_instrument_data import get_price
 from get_market_watch_data import fetch_merged_data
@@ -36,12 +41,12 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(
-    title="Stock Pulse API", 
-    description="Get instrument price data", 
+    title="Stock Pulse API",
+    description="Get instrument price data",
     version="1.0.0",
     lifespan=lifespan,
     docs_url="/docs",
-    redoc_url="/redoc"
+    redoc_url="/redoc",
 )
 db = MarketWatchDB()
 
@@ -95,7 +100,9 @@ async def _market_close_watcher():
         app.state._last_market_open = is_market_open()
         print(f"Market open on startup: {app.state._last_market_open}")
         if not app.state._last_market_open:
-            print("Market is closed on startup. Saving initial snapshot in background...")
+            print(
+                "Market is closed on startup. Saving initial snapshot in background..."
+            )
             # Run in background to not block startup
             asyncio.create_task(_save_snapshot_if_valid())
     except Exception as e:
