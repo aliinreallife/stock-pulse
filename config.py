@@ -7,6 +7,9 @@ from datetime import time
 
 import pytz
 import redis.asyncio as redis
+from dotenv import load_dotenv
+
+load_dotenv()
 
 # Tehran timezone
 TEHRAN_TZ = pytz.timezone("Asia/Tehran")
@@ -35,13 +38,13 @@ _redis_available = None
 async def get_redis():
     """Get Redis client if available, return None if Redis is disabled or unavailable."""
     global _redis, _redis_available
-    
+
     if not REDIS_ENABLED:
         return None
-    
+
     if _redis_available is False:
         return None
-    
+
     if _redis is None:
         try:
             _redis = await redis.from_url(REDIS_URL, decode_responses=True)
@@ -49,12 +52,12 @@ async def get_redis():
             await _redis.ping()
             _redis_available = True
         except Exception as e:
-            if DEBUG:
-                print(f"Redis connection failed: {e}")
+            if _redis_available is None:  # Only show warning on first failure
+                print(f"Warning: Redis connection failed: {e}")
             _redis_available = False
             _redis = None
             return None
-    
+
     return _redis
 
 
@@ -67,7 +70,7 @@ WEBSOCKET_UPDATE_INTERVAL = float(
     os.getenv("WEBSOCKET_UPDATE_INTERVAL", "0.5")
 )  # seconds
 
-DEBUG = os.getenv("DEBUG", "true") == "true"
+DEBUG = os.getenv("DEBUG", "false") == "true"
 
 # TSETMC MarketWatch base
 TSETMC_BASE = "https://cdn.tsetmc.com/api/ClosingPrice/GetMarketWatch"
