@@ -44,7 +44,7 @@ Real-time stock market data from TSETMC, because their API documentation doesn't
 
 2. **Run application:**
    ```bash
-   python api.py
+   python main.py
    ```
 
 ## API Endpoints
