@@ -4,7 +4,7 @@ from get_instrument_data import get_price
 from utils import is_market_open
 from database import MarketWatchDB
 from config import get_redis
-from config import WEBSOCKET_UPDATE_INTERVAL
+from config import DEBUG, WEBSOCKET_UPDATE_INTERVAL, REDIS_TTL_SECONDS
 import asyncio
 
 router = APIRouter()
@@ -38,6 +38,8 @@ async def price_websocket(websocket: WebSocket, ins_code: str):
                 from_redis = False
                 try:
                     r = await get_redis()
+                    if DEBUG:
+                        print(f"price from redis: {ins_code}")
                     v = await r.get(f"mw:inst:{ins_code}:price")
                     if v is not None:
                         value = float(v)
@@ -46,9 +48,13 @@ async def price_websocket(websocket: WebSocket, ins_code: str):
                     pass
                 if value is None:
                     value = get_price(ins_code_int)
+                    if DEBUG:
+                        print(f"price from api: {ins_code}")
                     try:
                         r = await get_redis()
-                        await r.set(f"mw:inst:{ins_code}:price", str(value), ex=120)
+                        if DEBUG:
+                            print(f"price to redis: {ins_code}")
+                        await r.set(f"mw:inst:{ins_code}:price", str(value), ex=REDIS_TTL_SECONDS)
                     except Exception:
                         pass
             else:
@@ -60,14 +66,18 @@ async def price_websocket(websocket: WebSocket, ins_code: str):
                     if v is not None:
                         value = float(v)
                         from_redis = True
+                        if DEBUG:
+                            print(f"pdv from redis: {ins_code}")
                 except Exception:
                     pass
                 if value is None:
                     value = db.get_pdv_by_ins_code(ins_code)
+                    if DEBUG:
+                        print(f"pdv from db: {ins_code}")
                     try:
                         if value is not None:
                             r = await get_redis()
-                            await r.set(f"mw:inst:{ins_code}:pdv", str(value), ex=120)
+                            await r.set(f"mw:inst:{ins_code}:pdv", str(value), ex=REDIS_TTL_SECONDS)
                     except Exception:
                         pass
                 if value is None:

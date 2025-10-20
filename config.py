@@ -45,3 +45,5 @@ API_PORT = int(os.getenv("API_PORT", "8000"))
 WEBSOCKET_UPDATE_INTERVAL = float(
     os.getenv("WEBSOCKET_UPDATE_INTERVAL", "0.5")
 )  # seconds
+
+DEBUG = os.getenv("DEBUG", "false") == "true"
