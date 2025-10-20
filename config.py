@@ -19,7 +19,6 @@ TRADING_DAYS = {0, 1, 2, 5, 6}  # Mon, Tue, Wed, Sat, Sun
 
 # Database configuration
 DATABASE_PATH = os.getenv("DATABASE_PATH", "data/market_watch.db")
-DATABASE_CLEANUP_DAYS = int(os.getenv("DATABASE_CLEANUP_DAYS", "30"))
 
 # API configuration
 API_HOST = os.getenv("API_HOST", "0.0.0.0")
