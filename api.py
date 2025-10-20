@@ -36,13 +36,18 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(
-    title="Stock Pulse API", description="Get instrument price data", lifespan=lifespan
+    title="Stock Pulse API", 
+    description="Get instrument price data", 
+    version="1.0.0",
+    lifespan=lifespan,
+    docs_url="/docs",
+    redoc_url="/redoc"
 )
 db = MarketWatchDB()
 
 # Register routers
-app.include_router(market_router)
-app.include_router(ws_router)
+app.include_router(market_router, tags=["market"])
+app.include_router(ws_router, tags=["websocket"])
 
 
 async def _save_snapshot_if_valid():
@@ -74,6 +79,8 @@ async def _save_snapshot_if_valid():
 
         except Exception as redis_err:
             print(f"Redis caching failed: {redis_err}")
+    except asyncio.TimeoutError:
+        print("Market watch data fetch timed out after 30s - skipping snapshot")
     except Exception as e:
         print(f"snapshot save failed: {e}")
         import traceback
@@ -83,13 +90,14 @@ async def _save_snapshot_if_valid():
 
 async def _market_close_watcher():
     """Save once at each 12:30 Tehran close; also save once if starting while closed."""
-    # On startup, if closed, save once
+    # On startup, if closed, save once (non-blocking)
     try:
         app.state._last_market_open = is_market_open()
         print(f"Market open on startup: {app.state._last_market_open}")
         if not app.state._last_market_open:
-            print("Market is closed on startup. Saving initial snapshot...")
-            await _save_snapshot_if_valid()
+            print("Market is closed on startup. Saving initial snapshot in background...")
+            # Run in background to not block startup
+            asyncio.create_task(_save_snapshot_if_valid())
     except Exception as e:
         print(f"initial market state check failed: {e}")
 
