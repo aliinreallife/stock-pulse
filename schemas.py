@@ -134,7 +134,7 @@ class MarketWatchItem(BaseModel):
     zTotTran: float
     qTotTran5J: float
     qTotCap: float
-    market_type: str
+    market_type: Optional[str] = None
 
 
 class MarketWatchResponse(BaseModel):
